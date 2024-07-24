@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>审核文档</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #note {
+            width: 100%;
+            height: 100px;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        #image {
+            margin-top: 10px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        #doc-table {
+            border-collapse: collapse;
+            /* 合并边框 */
+            width: 100%;
+            /* 表格宽度 */
+            border: 1px solid #ddd;
+            /* 表格边框 */
+        }
+
+        /* 设置表头样式 */
+        #doc-table th #doc-table td {
+            background-color: #f2f2f2;
+            /* 表头背景色 */
+            border: 1px solid #ddd;
+            /* 单元格边框 */
+            padding: 8px;
+            /* 单元格内边距 */
+            text-align: left;
+            /* 文本对齐方式 */
+        }
+    </style>
+</head>
+
+<body>
+    <h1>待审批文档</h1>
+    <button onclick="fetchDocuments()">拉取待审批文档</button>
+
+    <table id="doc-table">
+        <thead>
+            <tr>
+                <th></th>
+                <th>成果号</th>
+                <th>申报人</th>
+                <th>成果标题</th>
+                <th>内容简介</th>
+                <th>生产工具</th>
+                <th>生成日期</th>
+                <th>审批状态</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 表格内容动态生成 -->
+        </tbody>
+    </table>
+    <br><br>
+
+    <label for="note">批注:</label>
+    <textarea id="note" name="note" required></textarea>
+    <button type="submit" id="updateButton">提交审批结果</button><br><br>
+
+    <label for="image">上传图片批注:</label>
+    <input type="file" id="image" name="image">
+    <button type="button" id="recognizeButton">识别</button><br><br>
+
+    <ul id="documents"></ul>
+
+    <script>
+
+        let noteTxt = null;
+        let selectedDocumentId = null; // 选中的成果号
+        let selectedApprovalStatus = null; // 选中的审批状态
+
+        const note = document.getElementById('note');
+        note.addEventListener('input', function () {
+            // 将文本框的值存储到selectedApprovalStatus变量中
+            noteTxt = note.value;
+            console.log('监听文本变动：', noteTxt);
+        });
+
+        const recognizeButton = document.getElementById('recognizeButton');
+        recognizeButton.addEventListener('click', function () { // ocr
+            const imageInput = document.getElementById('image');
+            const imageFile = imageInput.files[0];
+            const formData = new FormData();
+            formData.append('image', imageFile); // 提交图片
+
+            fetch('/ocr', {
+                method: 'POST',
+                body: formData
+            })
+                .then(resp => resp.json())
+                .then(data => {
+                    console.log(data);
+                    alert('ocr 识别成功')
+                    note.value = data;
+                    note.dispatchEvent(new Event('input'));
+                })
+                .catch(error => {
+                    alert('ocr 失败, err: ', error)
+                });
+        });
+
+        function fetchDocuments() { // 拉取未审批
+            fetch('/approve')
+                .then(response => response.json())
+                .then(data => {
+                    const message = data.message;
+                    const documents = data.documents;
+                    alert('拉取未审批项目成功', data.message);
+
+                    const documentTable = document.getElementById('doc-table');
+                    const tbody = documentTable.getElementsByTagName('tbody')[0];
+                    tbody.innerHTML = ''; // 清空表格内容
+
+                    // const documentsList = document.getElementById('documents');
+                    // documents.forEach(doc => {
+                    //     const listItem = document.createElement('li');
+                    //     listItem.innerText = `成果号: ${doc.成果号}, 成果申报人: ${doc.成果申报人}, 成果标题: ${doc.成果标题}, 成果内容简介: ${doc.成果内容简介}, 成果生产工具: ${doc.成果生产工具}, 成果生成日期: ${doc.成果生成日期}, 审批状态: ${doc.审批状态}`;
+                    //     documentsList.appendChild(listItem);
+                    // });
+                    // 成果号: 3, 成果申报人: 李四, 成果标题: hello, 成果内容简介: hehehe, 成果生产工具: too, 成果生成日期: Sun, 14 Jul 2024 00:00:00 GMT, 审批状态: 未审批
+                    // 成果号: 4, 成果申报人: 李四, 成果标题: hello, 成果内容简介: hehehe, 成果生产工具: too, 成果生成日期: Sun, 14 Jul 2024 00:00:00 GMT, 审批状态: 未审批
+
+                    documents.forEach(doc => {
+                        const row = document.createElement('tr');
+
+                        const radioCell = document.createElement('td');
+                        const radio = document.createElement('input');
+                        radio.type = 'radio';
+                        radio.name = 'documentRadio';
+                        // 添加相同的name属性，确保只能选择一条记录
+                        // radio.value = doc['成果号'];
+                        radioCell.appendChild(radio);
+                        row.appendChild(radioCell);
+
+                        const id = document.createElement('td');
+                        id.textContent = doc['成果号']; // 1 2 3...
+                        row.appendChild(id); // 填表 是文本
+                        const submitter = document.createElement('td');
+                        submitter.textContent = doc['成果申报人'];
+                        row.appendChild(submitter);
+                        const title = document.createElement('td');
+                        title.textContent = doc['成果标题'];
+                        row.appendChild(title);
+                        const introduction = document.createElement('td');
+                        introduction.textContent = doc['成果内容简介'];
+                        row.appendChild(introduction);
+                        const tool = document.createElement('td');
+                        tool.textContent = doc['成果生产工具'];
+                        row.appendChild(tool);
+
+                        const date = document.createElement('td');
+                        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                        const formattedDate = new Intl.DateTimeFormat(
+                            'zh-CN', options).format(new Date(doc['成果生成日期']));
+                        date.textContent = formattedDate;
+                        row.appendChild(date);
+
+                        const status = document.createElement('td');
+                        const selectStatus = document.createElement('select'); // 元素类型
+                        const statusOptions = ['未审批', '已通过', '未通过', '已终止'];
+                        statusOptions.forEach(option => {
+                            const statusOption = document.createElement('option');
+                            statusOption.value = option;
+                            statusOption.textContent = option;
+                            selectStatus.appendChild(statusOption);
+                        });
+                        status.appendChild(selectStatus); // 填表 是option
+                        row.appendChild(status);
+
+                        const ops = document.createElement('td');
+                        const dnldLink = document.createElement('a');
+                        dnldLink.href = `/download?submitter=${doc['成果申报人']}&title=${doc['成果标题']}`; // 下载 doc
+                        dnldLink.textContent = '下载';
+                        ops.appendChild(dnldLink);
+                        row.appendChild(ops);
+
+                        tbody.appendChild(row);
+
+                        // 为本行的 单选 状态 加事件
+                        selectStatus.addEventListener('change', function () {
+                            const newStatus = selectStatus.value;
+                            selectedApprovalStatus = newStatus
+                            console.log("得到新状态", selectedApprovalStatus);
+                        });
+                        radio.addEventListener('change', function () {
+                            if (radio.checked) {
+                                selectedDocumentId = doc['成果号'];
+                                console.log('得到成果号:', selectedDocumentId);
+                            }
+                        });
+                    });
+                });
+        }
+
+        const updateButton = document.getElementById('updateButton');
+        updateButton.addEventListener('click', function () {
+            fetch('/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id: selectedDocumentId,
+                    newStatus: selectedApprovalStatus,
+                    note: noteTxt
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert('状态更新成功:', data.message);
+                })
+                .catch(error => {
+                    alert('状态更新失败');
+                });
+        })
+
+    </script>
+</body>
+
+</html>

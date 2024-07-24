@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask App</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f2f2f2;
+            font-family: Arial, sans-serif;
+        }
+
+        #identity{
+            display: flex;
+            flex-direction: row;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>欢迎使用流程审批工具</h2>
+
+    <h3>请选择身份</h3>
+    <div id="identity">
+        <button id="applicant-btn">申请人</button>
+        <button id="approver-btn">审批人</button>
+    </div>
+
+
+    <script>
+        document.getElementById('applicant-btn').addEventListener('click', function () {
+            // window.location.href = '/applicant';
+            window.location.href= '/loginApplicant'
+        });
+
+        document.getElementById('approver-btn').addEventListener('click', function () {
+            // window.location.href = '/approver';
+            window.location.href= '/loginApprover'
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用高德地图API绘制列车行驶轨迹</title>
+    <script type="text/javascript">
+        window._AMapSecurityConfig = { securityJsCode: '1ff87a73b8f38158928aab98acad7674' }
+    </script>
+    <script type="text/javascript"
+        src="https://webapi.amap.com/maps?v=2.0&key=fbe48bcd9534f0d18472d8b536958013&plugin=AMap.Driving,AMap.Walking"></script>
+    <script src="https://a.amap.com/jsapi_demos/static/demo-center/js/demoutils.js"></script>
+    <script type="text/javascript" src="https://cache.amap.com/lbs/static/addToolbar.js"></script>
+    <style type="text/css">
+        html,
+        body,
+        #container {
+            width: 99.99%;
+            height: 98%;
+        }
+
+        #pathForm {
+            display: inline-block;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        #pathForm input {
+            width: 150px;
+            /* 设置输入框宽度为150px */
+            margin-right: 10px;
+        }
+
+        #pathForm button {
+            width: 100px;
+            height: 30px;
+            border-width: 0px;
+            border-radius: 5px;
+            background: #1E90FF;
+            cursor: pointer;
+            outline: none;
+            /* 不显示轮廓线 */
+            font-family: Microsoft YaHei;
+            color: white;
+            /* 字体颜色 */
+            font-size: 17px;
+        }
+
+        #pathForm button:hover {
+            /* 鼠标移入按钮范围时改变颜色 */
+            background: #5599FF;
+        }
+
+        #pathForm label {
+            color: #1E90FF;
+            /* 蓝色字体 */
+        }
+
+        #pathForm input {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <form id="pathForm">
+        <label for="start">出发站:</label>
+        <input type="text" id="start" name="start" required>
+        <label for="end">到达站:</label>
+        <input type="text" id="end" name="end" required>
+
+        <button type="submit" onclick="submitForm()">查询路径</button>
+        <button class="btn" onclick="loadMap(route)">绘制路线</button>
+    </form>
+
+    <div id="result"></div>
+    <div id="container"></div>
+
+    <script>
+
+        let route = []
+
+        // 第一个参数是对应的容器，第二个参数是维护地图参数的对象
+        var map = new AMap.Map('container', {
+            zoom: 13,  // 地图显示的缩放级别
+            center: [103.737026, 36.108024], // 地图中心点坐标
+        });
+
+        function loadMap(route) {
+            event.preventDefault();
+            console.log('route', route);
+
+            var map = new AMap.Map('container', {
+                zoom: 13,  //设置地图显示的缩放级别
+                center: [103.737026, 36.108024],//设置地图中心点坐标，西北师范大学新校区
+            });
+            //返回经纬度对象
+            function convertToLatLng(LatLng) {
+                return new AMap.LngLat(LatLng[0], LatLng[1])
+            }
+            var waypointArray = []
+            for (var i = 1; i < route.length - 1; i++) {
+                waypointArray.push(convertToLatLng(route[i]))
+            }
+            var driving = new AMap.Driving({
+                map: map,
+                // hideMarkers: true, // 隐藏途经点
+                showTraffic: true,
+            }).search(convertToLatLng(route[0]), convertToLatLng(route[route.length - 1]),
+                {
+                    waypoints: waypointArray
+                })
+        }
+
+        // 提交查询
+        function submitForm() {
+            event.preventDefault();
+
+            const start = document.getElementById("start").value;
+            const end = document.getElementById("end").value;
+
+            console.log('发送ajax');
+
+            fetch(`/findpth?start=${start}&end=${end}`)
+                .then(response => response.json()) // 解析json
+                .then(data => {
+                    route = data
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+
+</html>
